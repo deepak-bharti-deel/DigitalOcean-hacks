@@ -1,0 +1,181 @@
+
+Setup virtual environment and making project do the following
+
+===========================================================>>>>>>>>>>>>>>>>>>>>>>>>
+
+database setup_____________
+
+if using python 2
+#sudo apt-get install python-pip python-dev libpq-dev postgresql postgresql-contrib nginx
+
+if using python 3
+#sudo apt-get install python3-pip python3-dev libpq-dev postgresql postgresql-contrib nginx
+
+  
+sudo -u postgres psql
+CREATE DATABASE myproject;  
+CREATE USER myprojectuser WITH PASSWORD 'password';
+ALTER ROLE myprojectuser SET client_encoding TO 'utf8';
+ALTER ROLE myprojectuser SET default_transaction_isolation TO 'read committed';
+ALTER ROLE myprojectuser SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE myproject TO myprojectuser;
+\q                => quits psql shell
+
+\c database_name  => connects to database named database_name
+\d                => shows tables in database named database_name1
+
+
+==============================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+/etc/systemd/system/gunicorn.service___
+
+[Unit]
+Description=gunicorn daemon
+After=network.target
+
+[Service]
+User=root
+Group=www-data
+WorkingDirectory=/home/django/django_project
+ExecStart=/home/venvs/dj10p3/bin/gunicorn --access-logfile - --workers 3 --bind unix:/home/django/django_project/django_project.sock django_project.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+
+
+start and enable this file___
+#sudo systemctl start gunicorn
+#sudo systemctl enable gunicorn
+
+   =>this enable command must make a socket named django_project.sock in given direcotry, if not then its the permissions issue
+   =>provide all the related dir appropriate permissions
+
+check the status if things went fine___
+#sudo systemctl status gunicorn   => just tells whether running or not
+#sudo journalctl -u gunicorn      =>tells what went wrong
+
+need to rload after making changes in this file__
+#sudo systemctl daemon-reload
+#sudo systemctl restart gunicorn
+
+=================================================================>>>>>>>>>>>>>>>>>>>
+
+nginx configuration for web app___ nginx has a powerfull connection handling mechanism this further transfer all requests to gunicorn/uwsgi which converts http calls to python calls and thus requests get served___
+
+upstream app_server {
+   server unix:/home/django/django_project/django_project.sock fail_timeout=0;
+}
+
+server {
+    listen 80;
+    #listen [::]:80 default_server ipv6only=on;
+
+    #listen 443 ssl;
+
+    #root /usr/share/nginx/html;
+    #index index.html index.htm;
+
+    client_max_body_size 4G;
+    server_name 139.59.87.76 www.hohos.in hohos.in;
+    #ssl on;
+    #ssl_certificate /etc/nginx/ssl/hohos_in/ssl-bundle.crt;
+    #ssl_certificate_key /etc/nginx/ssl/hohos_in/hohos_in.key;
+    #ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;
+
+
+    keepalive_timeout 5;
+
+    # Your Django project's media files - amend as required
+    location /media  {
+        alias /home/django/django_project/django_project/media_root;
+    }
+
+    # your Django project's static files - amend as required
+    location /static {
+        alias /home/django/django_project/django_project/static_root;
+    }
+
+    # Proxy the static assests for the Django Admin panel
+    #location /static/admin {
+    #   alias /home/venvs/dj10p3/lib/python3.5/dist-packages/django/contrib/admin/static/admin/;
+    #}
+
+    location = /robots.txt  { access_log off; log_not_found off; }
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location / {
+            #proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            #proxy_set_header Host $host;
+            #proxy_redirect off;
+            #proxy_buffering off;
+            #uwsgi_read_timeout 18000;
+            include proxy_params;
+            proxy_pass http://app_server;
+            #proxy_pass http://home/django/django_project/django_project.sock fail_timeout=0;
+ }
+
+}
+
+
+# sudo nginx -t                          =>  tests the syntax of /etc/nginx/sites-available/site_name file
+# sudo systemctl restart nginx           =>  restarts nginx
+# sudo ufw delete allow 8000             =>  close port 8000
+# sudo ufw allow 'Nginx Full'       
+
+# sudo tail -F /var/log/nginx/error.log  => tells what went wrong while listening http requests
+
+
+#completely remove nginx
+sudo apt-get remove nginx* --purge
+==================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+
+some important things to remember ___
+
+database related 
+1. go to /etc/postgresql/9.5/main/pg_hba.conf and add a line 
+host    all     all     139.59.69.62/24     trust
+
+2. go to /etc/postgresql/postgresql.conf
+change listen_addresses = 'localhost' => listen_addresses =  '*'
+
+3. in settings.py configure database fill the port 5432
+
+
+
+******take care of permissions of the files
+=============================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+dumpdata and load data____
+
+use this while dumping data 
+    python manage.py dumpdata --natural-foreign --exclude auth.permission --exclude contenttypes --indent 4 > data.json  
+    ==> this deserialize the data and reserialize, make us avoid from id confliction issues
+
+loaddata simply by 
+    python manage.py loaddata data.json
+    if get some error just comment the presave or post save signals in models.py files, and then load and uncomment after ur done with loading
+
+===================================================================>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+command to copy files to remote server 
+
+#scp -Crpv django_project root@139.59.87.76:/home/django
+
+
+
+==================================>>>>>>>>>>>>>>>
+
+checking permissions___ of the whole path
+namei -nom /home/sammy/myproject/myproject.sock
+
+
+setting the permissions for django_project.sock creation
+
+chmod -R 777 /home/django/django_project
+======================================================
+
