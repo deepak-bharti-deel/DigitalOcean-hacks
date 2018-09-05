@@ -1,0 +1,56 @@
+Herko commands
+
+
+For Deploying on Heroku use following url- 
+[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
+
+==============================>>>>>>>>>>>>>>>>>>>>.
+
+1. while deploying on heroku you need to specify the app name 
+2. Some other things may also be required, depends on the backend etc 
+
+when deployed - 
+1. Go to settings > reveal config > set environment variables if any using in your configuration files 
+2. Connecting to GitHub repo for reflecting changes done on repo to heroku 
+  go to, 
+  deploy tab > Deploy method > GitHub > select the corresponding repo(for this you need to provide acces to third partu on repo setttings) 
+  You can deploy any branch anytime, or
+  You can also enable automatic deploys which makes changes on repo automaticaly reflect on Heroku 
+3. Go to more tab on right upper corner for viewing logs and other stuff.
+4. Restart all dynos after making changes to app.
+
+=================================>>>>>>>>>>>>>>>>>>>
+
+Accessing heroku app from terminal - 
+
+$ heroku login
+$ heroku run python manage.py migrate --app app_name_to_run_this_command_for
+
+
+===============>>>>>>>>>>>>>>>
+Cloning heroku app to local system, making changes and pushing back - 
+
+$heroku login
+Clone the repository
+Use Git to clone contrihubs's source code to your local machine.
+
+$ heroku git:clone -a contrihubs
+$ cd contrihubs
+Deploy your changes
+Make some changes to the code you just cloned and deploy them to Heroku using Git.
+
+$ git add .
+$ git commit -am "make it better"
+$ git push heroku master
+
+
+
+================================>>>>>>>>>>>>>>>>>>>>>>>>
+
+# use run console option which is given along with restart all dynos for runing different commands linebreaks
+
+$ python manage.py makemigrations
+$ python manage.py migrate 
+$ mkdir any_dir_u_want etc
+
+# running these commands on run konsole is same like running on local pc 
